@@ -693,6 +693,8 @@ append_archive(struct bsdtar *bsdtar, struct archive *a, struct archive *ina)
 		if ((bsdtar->flags & OPTFLAG_INTERACTIVE) &&
 		    !yes("copy '%s'", archive_entry_pathname(in_entry)))
 			continue;
+		if (edit_pathname(bsdtar, in_entry))
+			continue;
 		if (bsdtar->verbose > 1) {
 			safe_fprintf(stderr, "a ");
 			list_item_verbose(bsdtar, stderr, in_entry);
