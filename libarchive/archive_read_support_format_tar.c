@@ -1102,8 +1102,11 @@ header_longname(struct archive_read *a, struct tar *tar,
 	if ((err != ARCHIVE_OK) && (err != ARCHIVE_WARN))
 		return (err);
 	if (archive_entry_copy_pathname_l(entry, tar->longname.s,
-	    archive_strlen(&(tar->longname)), tar->sconv) != 0)
+	    archive_strlen(&(tar->longname)), tar->sconv) != 0) {
 		err = set_conversion_failed_error(a, tar->sconv, "Pathname");
+	} else {
+		err = ARCHIVE_OK;
+	}
 	return (err);
 }
 
