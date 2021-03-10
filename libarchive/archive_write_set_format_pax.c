@@ -596,7 +596,11 @@ archive_write_pax_header(struct archive_write *a,
 	pax = (struct pax *)a->format_data;
 
 	/* Sanity check. */
-	if (archive_entry_pathname(entry_original) == NULL) {
+	if (archive_entry_pathname(entry_original) == NULL
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            && archive_entry_pathname_w(entry_original) == NULL
+#endif
+	) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			  "Can't record entry in tar file without pathname");
 		return (ARCHIVE_FAILED);
