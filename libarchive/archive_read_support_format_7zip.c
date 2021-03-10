@@ -55,8 +55,8 @@ __FBSDID("$FreeBSD$");
 #endif
 
 #define _7ZIP_SIGNATURE	"7z\xBC\xAF\x27\x1C"
-#define SFX_MIN_ADDR	0x27000
-#define SFX_MAX_ADDR	0x60000
+#define SFX_MIN_ADDR	0x7000
+#define SFX_MAX_ADDR	0x90000
 
 
 /*
@@ -2588,7 +2588,7 @@ read_Header(struct archive_read *a, struct _7z_header_info *h,
 		if (entries[i].flg & HAS_STREAM) {
 			if ((size_t)sindex >= si->ss.unpack_streams)
 				return (-1);
-			if (entries[i].mode == 0)
+			if (entries[i].mode == 0 || ((entries[i].mode & 0444) == 0))
 				entries[i].mode = AE_IFREG | 0666;
 			if (si->ss.digestsDefined[sindex])
 				entries[i].flg |= CRC32_IS_SET;
