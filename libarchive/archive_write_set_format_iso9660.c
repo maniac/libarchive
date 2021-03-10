@@ -86,7 +86,7 @@
 #define FD_1_44M_SIZE		(1024 * 1440)
 #define FD_2_88M_SIZE		(1024 * 2880)
 #define MULTI_EXTENT_SIZE	(ARCHIVE_LITERAL_LL(1) << 32)	/* 4Gi bytes. */
-#define MAX_DEPTH		8
+#define MAX_DEPTH		20
 #define RR_CE_SIZE		28		/* SUSP "CE" extension size */
 
 #define FILE_FLAG_EXISTENCE	0x01
@@ -1526,6 +1526,8 @@ iso9660_write_header(struct archive_write *a, struct archive_entry *entry)
 	struct isoent *isoent;
 	int r, ret = ARCHIVE_OK;
 
+	char *hardlink = 0;
+
 	iso9660 = a->format_data;
 
 	iso9660->cur_file = NULL;
@@ -1597,9 +1599,11 @@ iso9660_write_header(struct archive_write *a, struct archive_entry *entry)
 	if (isoent->file != file)
 		return (ARCHIVE_OK);
 
+	hardlink = archive_entry_hardlink(file->entry);
+
 	/* Non regular files contents are unneeded to be saved to
 	 * temporary files. */
-	if (archive_entry_filetype(file->entry) != AE_IFREG)
+	if (archive_entry_filetype(file->entry) != AE_IFREG && !hardlink)
 		return (ret);
 
 	/*
@@ -1607,11 +1611,9 @@ iso9660_write_header(struct archive_write *a, struct archive_entry *entry)
 	 */
 	iso9660->cur_file = file;
 
-	if (archive_entry_nlink(file->entry) > 1) {
-		r = isofile_register_hardlink(a, file);
-		if (r != ARCHIVE_OK)
-			return (ARCHIVE_FATAL);
-	}
+	r = isofile_register_hardlink(a, file);
+	if (r != ARCHIVE_OK)
+		return (ARCHIVE_FATAL);
 
 	/*
 	 * Prepare to save the contents of the file.
