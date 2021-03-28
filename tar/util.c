@@ -463,10 +463,88 @@ strip_absolute_path(struct bsdtar *bsdtar, const char *p)
  *
  * TODO: Support pax-style regex path rewrites.
  */
+
+#if defined(_WIN32) && !defined(__CYGWIN__)
+static const char* _utf16_to_utf8(const wchar_t *src, char *out)
+{
+	char *p = out;
+	wchar_t c;
+	while((c = *src++) != 0) {
+		if(c <= 0x7f) {
+			*p++ = c;
+		} else if(c <= 0x7ff) {
+			*p++ = 0xc0 | (c >> 6);
+			*p++ = 0x80 | (c & 0x3f);
+		} else if(c < 0xd800 || c >= 0xe000) {
+			*p++ = 0xe0 | (c >> 12);
+			*p++ = 0x80 | ((c >> 6) & 0x3f);
+			*p++ = 0x80 | (c & 0x3f);
+		} else if(c >= 0xd800 && c <= 0xdfff) {
+			wchar_t c2 = *src++;
+			unsigned long u = ((c & 0x3ff) << 10) | (c2 & 0x3ff);
+			*p++ = 0xf0 | (u >> 18);
+			*p++ = 0x80 | ((u >> 12) & 0x3f);
+			*p++ = 0x80 | ((u >> 6) & 0x3f);
+			*p++ = 0x80 | (u & 0x3f);
+		}
+	}
+	*p = 0;
+	return out;
+}
+
+static const wchar_t* _utf8_to_utf16(const char *src, wchar_t *out) {
+	wchar_t *p = out;
+	unsigned char c;
+	while((c = (unsigned char) *src++) != 0) {
+		if(c <= 0x7f) {
+			*p++ = c;
+		} else if((c & 0xe0) == 0xc0) {
+			*p++ = ((c & 0x1f) << 6) | (*src++ & 0x3f);
+		} else if((c & 0xf0) == 0xe0) {
+			unsigned int c2 = (unsigned char) (*src++) & 0x3f;
+			unsigned int c3 = (unsigned char) (*src++) & 0x3f;
+			unsigned int u = ((c & 0xf) << 12) | (c2 << 6) | c3;
+			*p++ = (wchar_t) u;
+		} else if((c & 0xf8) == 0xf0) {
+			unsigned int c2 = (unsigned char) (*src++) & 0x3f;
+			unsigned int c3 = (unsigned char) (*src++) & 0x3f;
+			unsigned int c4 = (unsigned char) (*src++) & 0x3f;
+			unsigned int u = ((c & 0x7) << 18) | (c2 << 12) | (c3 << 6) | c4;
+			*p++ = 0xd800 | (u >> 10);
+			*p++ = 0xdc00 | (u & 0x3ff);
+		}
+	}
+	*p = 0;
+	return out;
+}
+
+static const char* archive_entry_pathname_n(struct archive_entry *entry, const wchar_t **wname, char *buf)
+{
+	return ((*wname = archive_entry_pathname_w(entry)) != 0)? _utf16_to_utf8(*wname, buf): archive_entry_pathname(entry);
+}
+
+static void archive_entry_copy_pathname_n(struct archive_entry *entry, const char *name, const wchar_t *wname)
+{
+	if(wname) { // name is UTF-8
+		wchar_t buf[4096];
+		archive_entry_copy_pathname_w(entry, _utf8_to_utf16(name, buf));
+	} else {
+		archive_entry_copy_pathname(entry, name);
+	}
+}
+#else
+#define archive_entry_pathname_n(e, w, b) archive_entry_pathname(e)
+#define archive_entry_copy_pathname_n(e, n, w) archive_entry_copy_pathname(entry, name)
+#endif
+
 int
 edit_pathname(struct bsdtar *bsdtar, struct archive_entry *entry)
 {
-	const char *name = archive_entry_pathname(entry);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	const wchar_t *wname = archive_entry_pathname_w(entry);
+	char name_buffer[4096];
+#endif
+	const char *name = archive_entry_pathname_n(entry, &wname, name_buffer);
 	const char *original_name = name;
 	const char *hardlinkname = archive_entry_hardlink(entry);
 	const char *original_hardlinkname = hardlinkname;
@@ -481,13 +559,13 @@ edit_pathname(struct bsdtar *bsdtar, struct archive_entry *entry)
 		return 1;
 	}
 	if (r == 1) {
-		archive_entry_copy_pathname(entry, subst_name);
+		archive_entry_copy_pathname_n(entry, subst_name, wname);
 		if (*subst_name == '\0') {
 			free(subst_name);
 			return -1;
 		} else
 			free(subst_name);
-		name = archive_entry_pathname(entry);
+		name = archive_entry_pathname_n(entry, &wname, name_buffer);
 		original_name = name;
 	}
 
@@ -553,7 +631,7 @@ edit_pathname(struct bsdtar *bsdtar, struct archive_entry *entry)
 
 	/* Replace name in archive_entry. */
 	if (name != original_name) {
-		archive_entry_copy_pathname(entry, name);
+		archive_entry_copy_pathname_n(entry, name, wname);
 	}
 	if (hardlinkname != original_hardlinkname) {
 		archive_entry_copy_hardlink(entry, hardlinkname);
