@@ -1144,7 +1144,8 @@ zip_read_local_file_header(struct archive_read *a, struct archive_entry *entry,
 			    (intmax_t)zip_entry->compressed_size);
 			ret = ARCHIVE_WARN;
 		}
-		if (zip_entry->uncompressed_size == 0) {
+		if (zip_entry->uncompressed_size == 0 ||
+			zip_entry->uncompressed_size == 0xffffffff) {
 			zip_entry->uncompressed_size
 			    = zip_entry_central_dir.uncompressed_size;
 		} else if (zip_entry->uncompressed_size
@@ -1186,7 +1187,7 @@ zip_read_local_file_header(struct archive_read *a, struct archive_entry *entry,
 		{
 			// symlink target string appeared to be compressed
 			int status = ARCHIVE_FATAL;
-			const void *uncompressed_buffer;
+			const void *uncompressed_buffer = NULL;
 
 			switch (zip->entry->compression)
 			{
