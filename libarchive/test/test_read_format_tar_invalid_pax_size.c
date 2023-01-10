@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
- * Copyright (c) 2012 Michihiro NAKAJIMA
+ * Copyright (c) 2020 Ben Wagner
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,36 +25,29 @@
 #include "test.h"
 __FBSDID("$FreeBSD$");
 
-DEFINE_TEST(test_option_lzma)
+/*
+ * The pax size attribute can be used to override the size.
+ * It should be validated the same way the normal size is validated.
+ * The test data is fuzzer output from
+ * https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=48467 .
+ */
+DEFINE_TEST(test_read_format_tar_invalid_pax_size)
 {
-	char *p;
-	int r;
-	size_t s;
+	/*
+	 * An archive that contains a PAX 'size' record with a large negative value.
+	 */
+	struct archive_entry *ae;
+	struct archive *a;
+	const char *refname = "test_read_format_tar_invalid_pax_size.tar";
 
-	/* Create a file. */
-	assertMakeFile("f", 0644, "a");
-
-	/* Archive it with lzma compression. */
-	r = systemf("%s -cf - --lzma f >archive.out 2>archive.err",
-	    testprog);
-	p = slurpfile(&s, "archive.err");
-	p[s] = '\0';
-	if (r != 0) {
-		if (strstr(p, "Unsupported compression") != NULL) {
-			skipping("This version of bsdtar was compiled "
-			    "without lzma support");
-			free(p);
-			return;
-		}
-		failure("--lzma option is broken");
-		assertEqualInt(r, 0);
-		goto done;
-	}
-	free(p);
-	/* Check that the archive file has an lzma signature. */
-	p = slurpfile(&s, "archive.out");
-	assert(s > 2);
-	assertEqualMem(p, "\x5d\00\00", 3);
-done:
-	free(p);
+	extract_reference_file(refname);
+	assert((a = archive_read_new()) != NULL);
+	assertEqualInt(ARCHIVE_OK, archive_read_support_filter_all(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, refname, 10240));
+	/* This assert will pass a normal debug build without the pax size check. */
+	/* Run this test with `-fsanitize=undefined` to verify.                   */
+	assertEqualIntA(a, ARCHIVE_FATAL, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
