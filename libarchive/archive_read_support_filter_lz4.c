@@ -25,8 +25,6 @@
 
 #include "archive_platform.h"
 
-__FBSDID("$FreeBSD$");
-
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
@@ -225,7 +223,7 @@ lz4_reader_init(struct archive_read_filter *self)
 	self->code = ARCHIVE_FILTER_LZ4;
 	self->name = "lz4";
 
-	state = (struct private_data *)calloc(sizeof(*state), 1);
+	state = (struct private_data *)calloc(1, sizeof(*state));
 	if (state == NULL) {
 		archive_set_error(&self->archive->archive, ENOMEM,
 		    "Can't allocate data for lz4 decompression");
@@ -584,7 +582,7 @@ lz4_filter_read_data_block(struct archive_read_filter *self, const void **p)
 		    state->out_block + prefix64k, (int)compressed_size,
 		    state->flags.block_maximum_size,
 		    state->out_block,
-		    prefix64k);
+		    (int)prefix64k);
 #else
 		uncompressed_size = LZ4_decompress_safe_withPrefix64k(
 		    read_buf + 4,

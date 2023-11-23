@@ -26,7 +26,6 @@
 
 
 #include "cpio_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/cpio.c,v 1.15 2008/12/06 07:30:40 kientzle Exp $");
 
 #include <sys/types.h>
 #include <archive.h>
@@ -1146,7 +1145,7 @@ list_item_verbose(struct cpio *cpio, struct archive_entry *entry)
 {
 	char			 size[32];
 	char			 date[32];
-	char			 uids[16], gids[16];
+	char			 uids[22], gids[22];
 	const char 		*uname, *gname;
 	FILE			*out = stdout;
 	const char		*fmt;
@@ -1210,7 +1209,10 @@ list_item_verbose(struct cpio *cpio, struct archive_entry *entry)
 #else
 	ltime = localtime(&mtime);
 #endif
-	strftime(date, sizeof(date), fmt, ltime);
+	if (ltime != NULL)
+		strftime(date, sizeof(date), fmt, ltime);
+	else
+		strcpy(date, "invalid mtime");
 
 	fprintf(out, "%s%3d %-8s %-8s %8s %12s %s",
 	    archive_entry_strmode(entry),

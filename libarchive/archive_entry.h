@@ -22,15 +22,13 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: head/lib/libarchive/archive_entry.h 201096 2009-12-28 02:41:27Z kientzle $
  */
 
 #ifndef ARCHIVE_ENTRY_H_INCLUDED
 #define	ARCHIVE_ENTRY_H_INCLUDED
 
 /* Note: Compiler will complain if this does not match archive.h! */
-#define	ARCHIVE_VERSION_NUMBER 3006003
+#define	ARCHIVE_VERSION_NUMBER 3007003
 
 /*
  * Note: archive_entry.h is for use outside of libarchive; the

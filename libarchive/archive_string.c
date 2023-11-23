@@ -25,7 +25,6 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_string.c 201095 2009-12-28 02:33:22Z kientzle $");
 
 /*
  * Basic resizable string support, to simplify manipulating arbitrary-sized
@@ -1324,6 +1323,10 @@ free_sconv_object(struct archive_string_conv *sc)
 }
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
+# if defined(WINAPI_FAMILY_PARTITION) && !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#  define GetOEMCP() CP_OEMCP
+# endif
+
 static unsigned
 my_atoi(const char *p)
 {
