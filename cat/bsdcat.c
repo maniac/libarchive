@@ -36,6 +36,9 @@
 #include <string.h>
 #endif
 
+#include <archive.h>
+#include <archive_entry.h>
+
 #include "bsdcat.h"
 #include "err.h"
 
@@ -47,7 +50,7 @@ static const char *bsdcat_current_path;
 static int exit_status = 0;
 
 
-void
+static __LA_NORETURN void
 usage(FILE *stream, int eval)
 {
 	const char *p;
@@ -57,7 +60,7 @@ usage(FILE *stream, int eval)
 	exit(eval);
 }
 
-static void
+static __LA_NORETURN void
 version(void)
 {
 	printf("bsdcat %s - %s \n",
@@ -66,7 +69,15 @@ version(void)
 	exit(0);
 }
 
-void
+static void
+bsdcat_print_error(void)
+{
+	lafe_warnc(0, "%s: %s",
+	    bsdcat_current_path, archive_error_string(a));
+	exit_status = 1;
+}
+
+static void
 bsdcat_next(void)
 {
 	if (a != NULL) {
@@ -81,15 +92,7 @@ bsdcat_next(void)
 	archive_read_support_format_raw(a);
 }
 
-void
-bsdcat_print_error(void)
-{
-	lafe_warnc(0, "%s: %s",
-	    bsdcat_current_path, archive_error_string(a));
-	exit_status = 1;
-}
-
-void
+static void
 bsdcat_read_to_stdout(const char* filename)
 {
 	int r;
@@ -129,12 +132,16 @@ main(int argc, char **argv)
 		switch (c) {
 		case 'h':
 			usage(stdout, 0);
-			break;
+			/* NOTREACHED */
+			/* Fallthrough */
 		case OPTION_VERSION:
 			version();
-			break;
+			/* NOTREACHED */
+			/* Fallthrough */
 		default:
 			usage(stderr, 1);
+			/* Fallthrough */
+			/* NOTREACHED */
 		}
 	}
 

@@ -1,12 +1,13 @@
-/*-
- * Copyright (c) 2014, Mike Kazantsev
+/*
+ * Copyright (c) 2023 Aaron Lindros
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *    notice, this list of conditions and the following disclaimer
+ *    in this position and unchanged.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -22,33 +23,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "test.h"
 
-#ifndef BSDCAT_H_INCLUDED
-#define BSDCAT_H_INCLUDED
+/* Test I arg - file name encoding */
+DEFINE_TEST(test_I)
+{
+	const char *reffile = "test_I.zip";
+	int r;
 
-#if defined(PLATFORM_CONFIG_H)
-/* Use hand-built config.h in environments that need it. */
-#include PLATFORM_CONFIG_H
-#else
-/* Not having a config.h of some sort is a serious problem. */
-#include "config.h"
-#endif
+	extract_reference_file(reffile);
+	r = systemf("%s -I UTF-8 %s >test.out 2>test.err", testprog, reffile);
+	assertEqualInt(0, r);
+	assertNonEmptyFile("test.out");
+	assertEmptyFile("test.err");
 
-struct bsdcat {
-	/* Option parser state */
-	int		  getopt_state;
-	char		 *getopt_word;
-
-	/* Miscellaneous state information */
-	int		  argc;
-	char		**argv;
-	const char	 *argument;
-};
-
-enum {
-	OPTION_VERSION
-};
-
-int bsdcat_getopt(struct bsdcat *);
-
-#endif
+	assertTextFileContents("Hello, World!\n", "Γειά σου Κόσμε.txt");
+}
